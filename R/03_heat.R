@@ -113,6 +113,8 @@ gt_solve_heat <- function(m, fl,
   if (store_snaps) { snaps[[1]] <- Temp; snap_t <- 0 }
 
   cum <- 0
+  tic <- proc.time()[["elapsed"]]
+  prog_every <- max(1L, nstep %/% 50L)            # 每 2% 更新一次讀數
   iw <- c(1L, 1:(nx - 1L)); ie <- c(2:nx, nx)     # 鏡像 padding 的取用索引
   jn <- c(1L, 1:(ny - 1L)); js <- c(2:ny, ny)     # (最外側面通量 = 0,取誰都行)
   for (k in seq_len(nstep)) {
@@ -136,9 +138,15 @@ gt_solve_heat <- function(m, fl,
       snaps[[length(snaps) + 1L]] <- Temp
       snap_t <- c(snap_t, k * dt)
     }
-    if (progress && k %% max(1L, nstep %/% 10L) == 0L) {
-      cat(sprintf("\r  %3.0f%%  t = %6.1f yr  生產井 %.2f degC",
-                  100 * k / nstep, k * dt / DAYS_PER_YEAR, Temp[m$idx_pro]))
+    if (progress && k %% prog_every == 0L) {
+      ## 投影用的即時讀數:進度條 + 模擬時間 + 生產井當下溫度 + 已耗時。
+      ## 台上最有說服力的不是進度條,是那個會自己往下掉的溫度。
+      f <- k / nstep
+      cat(sprintf(
+        "\r  [%s%s] %3.0f%%   t = %5.1f 年   生產井 %6.2f degC   %4.1f s",
+        strrep("=", round(24 * f)), strrep(".", 24 - round(24 * f)),
+        100 * f, k * dt / DAYS_PER_YEAR, Temp[m$idx_pro],
+        proc.time()[["elapsed"]] - tic))
       utils::flush.console()
     }
   }

@@ -20,7 +20,7 @@ source("R/01_setup.R")
 #'
 #' @param tol   收斂判準:最大格點殘差 [m]
 #' @return list(h, Qxf, Qyf, Qext, resid_max, iters, converged, omega)
-gt_solve_flow <- function(m, tol = 1e-11, maxit = 100000L) {
+gt_solve_flow <- function(m, tol = 1e-11, maxit = 100000L, progress = FALSE) {
   nx <- m$nx; ny <- m$ny
 
   h <- matrix(m$p$h_ref, ny, nx)
@@ -51,12 +51,16 @@ gt_solve_flow <- function(m, tol = 1e-11, maxit = 100000L) {
       h[id] <- h[id] + omega * (core[id - ny] - h[id])
     }
     if (k %% 20L == 0L || k == maxit) {
-      r <- gt_flow_imbalance(m, h)
-      if (max(abs(r[free])) / m$Tr < tol) {
-        iters <- k; converged <- TRUE; break
+      r <- max(abs(gt_flow_imbalance(m, h)[free]))
+      ## 看著殘差一個數量級一個數量級往下掉 —— 這就是「收斂」長的樣子
+      if (progress && k %% 100L == 0L) {
+        cat(sprintf("\r  迭代 %5d   最大質量殘差 %9.2e m3/day", k, r))
+        utils::flush.console()
       }
+      if (r / m$Tr < tol) { iters <- k; converged <- TRUE; break }
     }
   }
+  if (progress) cat("\r", strrep(" ", 58), "\r", sep = "")
   if (!converged) warning("SOR 未在 maxit 內收斂", call. = FALSE)
 
   Qext <- gt_flow_imbalance(m, h)         # 自由格 ~= 0;定水頭格 = 邊界通量
@@ -158,7 +162,7 @@ gt_run_flow <- function() {
 
   cat("解穩態水頭 (紅黑 SOR) ...\n")
   tic <- proc.time()[["elapsed"]]
-  fl <- gt_solve_flow(m)
+  fl <- gt_solve_flow(m, progress = TRUE)
   cat(sprintf("  omega = %.4f, %d 次迭代, %.1f s\n",
               fl$omega, fl$iters, proc.time()[["elapsed"]] - tic))
   cat(sprintf("  最大格點質量殘差 = %.3e m3/day  (井的抽注率 = %g)\n",

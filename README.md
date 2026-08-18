@@ -28,8 +28,15 @@
 
 ### 只想看結果
 
-打開 `outputs/report.html` — 用瀏覽器開就好，不需要裝 R。
-單一檔案、離線可看、可以直接寄給人。
+用瀏覽器打開這兩個檔就好，不需要裝 R。都是單一檔案、離線可看、可以直接寄給人。
+
+| 檔案 | 內容 |
+|---|---|
+| `outputs/intro.html` | **專案說明** — 假設場景、IC/BC、控制方程式、每支檔案怎麼用、執行時畫面長什麼樣 |
+| `outputs/report.html` | **結果** — 流場、溫度場動畫、生產井歷線、設計圖、驗證摘要 |
+
+現場 demo 的順序就是：`intro.html` → 進 R 跑一次 → `report.html`。
+逐分鐘的講稿在 [`docs/workshop-guide.md`](docs/workshop-guide.md)。
 
 ### 想自己重跑
 
@@ -107,11 +114,13 @@ geothermal-doublet/
 ├─ params/
 │  └─ params.csv          ← 所有物理參數(合成),不寫死在程式裡
 ├─ R/                     ← 分析主體,照編號依序執行
+│  ├─ 00_intro.R          ← 產生專案說明頁(規格/IC/BC/方程式/檔案用法)
 │  ├─ 01_setup.R          ← 參數、網格、IC/BC(只定義函式,不做運算)
 │  ├─ 02_flow.R           ← 穩態水頭 + Darcy 通量 + 流線追蹤
 │  ├─ 03_heat.R           ← 溫度移流–延散(熱遲滯 R 由此自然長出)
 │  ├─ 04_sweep.R          ← 設計掃描:井距 x 抽注率 -> 熱突破年數
-│  └─ 05_viz.R            ← 互動式報告(plotly + highcharter)
+│  ├─ 05_viz.R            ← 互動式報告(plotly + highcharter)
+│  └─ 99_demo_prep.R      ← workshop 選配:產生「物理寫錯」的對照報告
 ├─ tests/
 │  ├─ run_tests.R         ← 入口:Rscript tests/run_tests.R
 │  ├─ test_01_flow_mass.R    質量守恆
