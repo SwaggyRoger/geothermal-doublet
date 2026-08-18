@@ -1,0 +1,9 @@
+# 大檔案不進版控 —— 實際位置寫在 output-link.md
+outputs/
+
+# R
+.Rproj.user/
+.Rhistory
+.RData
+.Ruserdata
+*.Rproj

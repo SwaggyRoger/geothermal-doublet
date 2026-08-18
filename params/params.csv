@@ -1,0 +1,21 @@
+name,value,unit,description
+Lx,3200,m,domain length in x (direction of the regional gradient)
+Ly,2000,m,domain width in y
+dx,20,m,uniform grid spacing (dx = dy)
+b,100,m,aquifer thickness
+K,5,m/day,hydraulic conductivity
+phi,0.10,-,porosity
+grad_regional,0.0002,-,regional hydraulic gradient from left to right
+h_ref,100,m,prescribed head at the left boundary
+Q_well,4320,m3/day,injection rate = production rate (50 L/s)
+L_doublet,800,m,injector-to-producer spacing
+T_res,130,degC,initial reservoir temperature
+T_inj,70,degC,temperature of the reinjected water
+rho_c_w,4.2e6,J/m3/K,volumetric heat capacity of water
+rho_c_s,2.2e6,J/m3/K,volumetric heat capacity of the rock matrix
+lambda_bulk,216000,J/m/day/K,bulk thermal conductivity (2.5 W/m/K)
+alpha_L,20,m,longitudinal thermal dispersivity
+t_end_yr,40,yr,simulated period
+dt_safety,0.8,-,fraction of the explicit stability limit used as dt
+snap_per_yr,2,1/yr,temperature snapshots stored per year
+T_drop_crit,2,degC,production temperature drop that defines thermal breakthrough
