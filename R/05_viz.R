@@ -168,8 +168,13 @@ gt_plot_temperature <- function(m, ht, sl, every = 4L) {
       type = "buttons", direction = "left", showactive = FALSE,
       x = 0, xanchor = "left", y = -0.16, yanchor = "top", pad = list(t = 4),
       buttons = list(
+        ## 第一個引數一定要「明列所有影格名稱」,不能寫 NULL。
+        ## plotly.js 的 null 代表「全部影格」,但 R 的 NULL 經 htmlwidgets
+        ## 序列化後會變成 JSON 的 []([] = 零個影格),播放鍵就變成按了沒事
+        ## ——不會報錯、console 乾淨,只是不動。
         ## fromcurrent = FALSE:停在最後一格時按播放,要從頭重播
-        list(label = "▶ 播放", method = "animate", args = list(NULL, list(
+        list(label = "▶ 播放", method = "animate", args = list(
+          as.list(sprintf("%.1f", yrs)), list(
           mode = "immediate", fromcurrent = FALSE,
           frame = list(duration = 220, redraw = TRUE),
           transition = list(duration = 0)))),

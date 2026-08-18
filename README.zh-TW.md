@@ -69,7 +69,7 @@ Rscript run_all.R
 Rscript tests/run_tests.R
 ```
 
-約 30 秒，60 條斷言。全綠才算數。
+約 30 秒，66 條斷言。全綠才算數。
 
 > 兩個指令都要在 **repo 根目錄**執行（`R/` 和 `params/` 的上一層），
 > 不要 `cd` 進 `R/` 再跑 —— 腳本裡的路徑都是相對於根目錄的。
@@ -125,7 +125,8 @@ geothermal-doublet/
 │  ├─ test_02_cfl.R          顯式法穩定條件
 │  ├─ test_03_energy.R       能量守恆
 │  ├─ test_04_retardation.R  熱遲滯因子 R  ← 最重要的一支
-│  └─ test_05_gringarten.R   與解析解對照 + 網格收斂
+│  ├─ test_05_gringarten.R   與解析解對照 + 網格收斂
+│  └─ test_06_animation.R    播放鍵指到的影格清單(按鈕死掉圖照樣畫得出來)
 ├─ docs/
 │  ├─ model-notes.md      ← 假設、簡化、數值決策紀錄
 │  └─ workshop-guide.md   ← 現場怎麼用這個 repo 上課

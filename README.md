@@ -83,7 +83,7 @@ About 2 minutes; regenerates everything under `outputs/`.
 Rscript tests/run_tests.R
 ```
 
-About 30 seconds, 60 assertions. It only counts if they are all green.
+About 30 seconds, 66 assertions. It only counts if they are all green.
 
 > Both commands must be run from the **repo root** (the level above `R/` and
 > `params/`). Do not `cd` into `R/` and run from there — every path inside the
@@ -144,7 +144,8 @@ geothermal-doublet/
 │  ├─ test_02_cfl.R          stability limit of the explicit scheme
 │  ├─ test_03_energy.R       energy conservation
 │  ├─ test_04_retardation.R  thermal retardation factor R  ← the important one
-│  └─ test_05_gringarten.R   comparison against the analytical solution + grid convergence
+│  ├─ test_05_gringarten.R   comparison against the analytical solution + grid convergence
+│  └─ test_06_animation.R    the play button's frame list (a dead button draws fine)
 ├─ docs/
 │  ├─ model-notes.md      ← assumptions, simplifications, numerical decisions
 │  └─ workshop-guide.md   ← how to actually teach from this repo
