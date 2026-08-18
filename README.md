@@ -24,19 +24,46 @@
 - `tests/` 裡的每一條都對應一個「不寫會安靜出錯」的真實陷阱（Section 06 的 TDD）
 - 產出是一份可以直接寄出的互動報告，不是散落在資料夾裡的 PNG
 
-## 30 秒看結果
+## 怎麼跑
+
+### 只想看結果
+
+打開 `outputs/report.html` — 用瀏覽器開就好，不需要裝 R。
+單一檔案、離線可看、可以直接寄給人。
+
+### 想自己重跑
+
+先確認 `Rscript` 叫得到：
+
+```bash
+Rscript --version
+```
+
+**如果顯示「找不到指令」**（Windows 裝 R 時預設不會加進 PATH），
+用完整路徑，或先把 R 加進這個 terminal 的 PATH：
+
+```powershell
+$env:Path += ";C:\Program Files\R\R-4.5.1\bin"
+```
+
+（只對當前視窗有效。要永久生效：系統內容 → 環境變數 → Path 加上同一行。）
+
+然後在 repo 根目錄：
 
 ```bash
 Rscript run_all.R
 ```
 
-約 2 分鐘，打開 `outputs/report.html`（單一檔案，可離線、可轉寄）。
+約 2 分鐘，重新產生 `outputs/` 裡的所有東西。
 
 ```bash
 Rscript tests/run_tests.R
 ```
 
 約 30 秒，60 條斷言。全綠才算數。
+
+> 兩個指令都要在 **repo 根目錄**執行（`R/` 和 `params/` 的上一層），
+> 不要 `cd` 進 `R/` 再跑 —— 腳本裡的路徑都是相對於根目錄的。
 
 ## 目前這組參數的答案
 
