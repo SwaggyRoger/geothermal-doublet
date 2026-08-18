@@ -1,5 +1,8 @@
-# 大檔案不進版控 —— 實際位置寫在 output-link.md
-outputs/
+# 產出:只有 intro.html 進版控 —— 不必裝 R 也能先看懂這個專案在做什麼。
+# 結果報告與 *.RData 都是 Rscript run_all.R 兩分鐘就重跑得出來的東西,
+# 不進版控(進了每次重跑都會再往歷史加 20 MB)。見 output-link.md
+outputs/*
+!outputs/intro.html
 
 # R
 .Rproj.user/
