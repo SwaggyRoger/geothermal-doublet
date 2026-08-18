@@ -55,25 +55,41 @@ gt_stream_trace <- function(p, sl, colour) {
             hoverinfo = "skip", showlegend = FALSE, name = "流線")
 }
 
+#' 井位:標記點(trace)+ 帶深色底的文字標註(layout annotation)
+#'
+#' 為什麼標籤不用 markers+text:溫度場的背景色從黑跨到亮黃,任何單一顏色的
+#' 文字一定會在某些影格上讀不到。plotly 的 annotation 可以給底色,
+#' 不管底下是什麼溫度都看得見。
 gt_well_traces <- function(p, m) {
   yw <- m$y[m$j_wel]
   p |>
-    add_trace(x = m$x[m$i_inj], y = yw, type = "scatter", mode = "markers+text",
-              marker = list(symbol = "triangle-down", size = 13,
+    add_trace(x = m$x[m$i_inj], y = yw, type = "scatter", mode = "markers",
+              marker = list(symbol = "triangle-down", size = 14,
                             color = "#38bdf8",
                             line = list(color = "white", width = 1.5)),
-              text = sprintf("注入 %g°C", m$p$T_inj), textposition = "top center",
-              textfont = list(color = "white", size = 12),
-              hovertemplate = "注入井<br>x %{x:.0f} m, y %{y:.0f} m<extra></extra>",
+              hovertemplate = sprintf(
+                "注入井 %g°C<br>x %%{x:.0f} m, y %%{y:.0f} m<extra></extra>",
+                m$p$T_inj),
               showlegend = FALSE) |>
-    add_trace(x = m$x[m$i_pro], y = yw, type = "scatter", mode = "markers+text",
-              marker = list(symbol = "triangle-up", size = 13,
+    add_trace(x = m$x[m$i_pro], y = yw, type = "scatter", mode = "markers",
+              marker = list(symbol = "triangle-up", size = 14,
                             color = "#f43f5e",
                             line = list(color = "white", width = 1.5)),
-              text = "生產", textposition = "top center",
-              textfont = list(color = "white", size = 12),
               hovertemplate = "生產井<br>x %{x:.0f} m, y %{y:.0f} m<extra></extra>",
               showlegend = FALSE)
+}
+
+gt_well_annotations <- function(m) {
+  yw <- m$y[m$j_wel]
+  mk <- function(x, txt, col) list(
+    x = x, y = yw, xref = "x", yref = "y",
+    text = txt, showarrow = TRUE, arrowhead = 0, arrowwidth = 1,
+    arrowcolor = "rgba(255,255,255,0.7)", ax = 0, ay = -34,
+    font = list(color = "#ffffff", size = 12),
+    bgcolor = col, bordercolor = "rgba(255,255,255,0.6)",
+    borderwidth = 1, borderpad = 3)
+  list(mk(m$x[m$i_inj], sprintf("注入 %g°C", m$p$T_inj), "rgba(12,74,110,0.85)"),
+       mk(m$x[m$i_pro], "生產",                          "rgba(136,19,55,0.85)"))
 }
 
 gt_field_layout <- function(p, m, title) {
@@ -83,6 +99,7 @@ gt_field_layout <- function(p, m, title) {
                  range = c(0, m$p$Lx), zeroline = FALSE),
     yaxis = list(title = "y (m)", scaleanchor = "x", scaleratio = 1,
                  range = c(0, m$p$Ly), zeroline = FALSE),
+    annotations = gt_well_annotations(m),
     margin = list(t = 46, l = 60, r = 20, b = 50)
   )
 }
