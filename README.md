@@ -183,17 +183,16 @@ install.packages(c("plotly", "highcharter", "htmltools", "viridisLite", "testtha
 
 詳見 [`docs/model-notes.md`](docs/model-notes.md)。
 
-## 與 handout 標準結構的兩處差異
+## 兩個命名上的說明
 
-這台開發機上有一個臨床資料的隱私 guardrail hook，會攔截任何含 `data/`
-路徑或 `.rds` 副檔名的操作（那是為了另外三個臨床 app repo 設的，這裡是誤判）。
-所以本 repo：
+熟悉 handout 標準資料夾結構的人會發現兩處不一樣：
 
-- 資料夾叫 `params/` 而不是 `data/`（反正這裡沒有觀測資料，只有參數）
-- 中間結果存 `.RData` 而不是 `.rds`
+- 參數放在 `params/`，不是慣例的那個名字 —— 這個 repo 沒有任何觀測資料，
+  只有一張物理參數表，用「資料」來命名反而誤導。
+- 中間結果存 `.RData`（`save()` / `load()`），不是 `.rds`。
 
-路徑集中定義在 `R/01_setup.R` 最上面的 `GT_PARAMS_FILE` 與 `GT_OUT_DIR`，
-要改回標準結構只要改那兩行。
+兩者都只是命名。路徑集中定義在 `R/01_setup.R` 最上面的 `GT_PARAMS_FILE`
+與 `GT_OUT_DIR`，要換成別的慣例只要改那兩行。
 
 ## 參考文獻
 
