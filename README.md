@@ -1,200 +1,237 @@
-# geothermal-doublet — 地熱抽注井對的熱突破模擬
+# geothermal-doublet — thermal breakthrough in a geothermal well doublet
 
-## 這個 repo 是什麼
+**English** | [繁體中文](README.zh-TW.md)
 
-一口注水井（冷）、一口生產井（熱），中間隔 L 公尺。問一句話：
+## What this repo is
 
-> **幾年後，生產井會被回注的冷水打穿？**
+One injection well (cold), one production well (hot), separated by L metres.
+One question:
 
-2D 數值實驗，全部用合成參數，不涉及任何合作單位資料。分兩段解：
+> **After how many years does re-injected cold water break through to the
+> production well?**
 
-1. **穩態水頭場** — 五點差分 + 紅黑 SOR，兩口井是點源匯，左右定水頭
-   （區域水力坡降），上下不透水。由 Darcy 定律取流速場。
-2. **溫度的移流–延散** — 能量的有限體積法，一階上風差分 + 顯式時間積分。
+A 2D numerical experiment on entirely synthetic parameters — no partner
+organisation's data is involved. It is solved in two stages:
 
-最後掃描「井距 × 抽注率」，回答工程問題：**要撐滿 30 年，井距要開多大。**
+1. **Steady-state head field** — five-point finite differences + red-black SOR.
+   The two wells are point source/sink terms, the left and right boundaries are
+   fixed head (the regional hydraulic gradient), top and bottom are no-flow.
+   The velocity field follows from Darcy's law.
+2. **Advection–dispersion of temperature** — a finite-volume formulation of the
+   energy balance, first-order upwind differencing, explicit time integration.
 
-### 這個 repo 存在的真正理由
+Finally it sweeps "well spacing × pumping rate" to answer the engineering
+question: **how far apart must the wells be to last a full 30 years?**
 
-它是 TBDC / 成大地下水研究室 workshop 的示範專案。示範的不是水文，是
-**「同樣的物理，用 R 從零寫成一個 repo，跑得出來、驗得過、結果可以寄給人」**
-這整套流程。所以它刻意做到三件事：
+### Why this repo really exists
 
-- 每一支腳本都可以單獨執行，照編號依序跑（Section 03 的資料夾規範）
-- `tests/` 裡的每一條都對應一個「不寫會安靜出錯」的真實陷阱（Section 06 的 TDD）
-- 產出是一份可以直接寄出的互動報告，不是散落在資料夾裡的 PNG
+It is the demo project for the TBDC / NCKU groundwater lab workshop. What it
+demonstrates is not the hydrology — it is the whole loop of
+**"take the same physics, write it from scratch in R as a repo, make it run,
+make it verifiable, and make the result something you can email to someone."**
+So it deliberately does three things:
 
-## 怎麼跑
+- Every script runs standalone, and they run in numbered order (the folder
+  convention from Section 03)
+- Every test in `tests/` maps to a real trap that fails *silently* if you skip
+  it (the TDD material from Section 06)
+- The deliverable is one interactive report you can send as-is, not a pile of
+  PNGs scattered across a folder
 
-### 只想看結果
+## How to run it
 
-用瀏覽器打開這兩個檔就好，不需要裝 R。都是單一檔案、離線可看、可以直接寄給人。
+### If you only want to see the results
 
-| 檔案 | 內容 |
+Just open these two files in a browser — no R installation needed. Each is a
+single self-contained file, viewable offline, and safe to email.
+
+| File | Contents |
 |---|---|
-| `outputs/intro.html` | **專案說明** — 假設場景、IC/BC、控制方程式、每支檔案怎麼用、執行時畫面長什麼樣 |
-| `outputs/report.html` | **結果** — 流場、溫度場動畫、生產井歷線、設計圖、驗證摘要 |
+| `outputs/intro.html` | **Project brief** — the scenario, IC/BC, governing equations, what each script is for, and what the run looks like on screen |
+| `outputs/report.html` | **Results** — flow field, animated temperature field, production-well time series, design chart, verification summary |
 
-現場 demo 的順序就是：`intro.html` → 進 R 跑一次 → `report.html`。
-逐分鐘的講稿在 [`docs/workshop-guide.md`](docs/workshop-guide.md)。
+The live demo order is: `intro.html` → run it once in R → `report.html`.
+The minute-by-minute script is in [`docs/workshop-guide.md`](docs/workshop-guide.md).
 
-### 想自己重跑
+### If you want to re-run it yourself
 
-先確認 `Rscript` 叫得到：
+First check that `Rscript` is reachable:
 
 ```bash
 Rscript --version
 ```
 
-**如果顯示「找不到指令」**（Windows 裝 R 時預設不會加進 PATH），
-用完整路徑，或先把 R 加進這個 terminal 的 PATH：
+**If you get "command not found"** (the Windows R installer does not add R to
+PATH by default), either use the full path, or add R to this terminal's PATH:
 
 ```powershell
 $env:Path += ";C:\Program Files\R\R-4.5.1\bin"
 ```
 
-（只對當前視窗有效。要永久生效：系統內容 → 環境變數 → Path 加上同一行。）
+(That affects the current window only. To make it permanent: System Properties →
+Environment Variables → add the same entry to Path.)
 
-然後在 repo 根目錄：
+Then, from the repo root:
 
 ```bash
 Rscript run_all.R
 ```
 
-約 2 分鐘，重新產生 `outputs/` 裡的所有東西。
+About 2 minutes; regenerates everything under `outputs/`.
 
 ```bash
 Rscript tests/run_tests.R
 ```
 
-約 30 秒，60 條斷言。全綠才算數。
+About 30 seconds, 60 assertions. It only counts if they are all green.
 
-> 兩個指令都要在 **repo 根目錄**執行（`R/` 和 `params/` 的上一層），
-> 不要 `cd` 進 `R/` 再跑 —— 腳本裡的路徑都是相對於根目錄的。
+> Both commands must be run from the **repo root** (the level above `R/` and
+> `params/`). Do not `cd` into `R/` and run from there — every path inside the
+> scripts is relative to the root.
 
-## 目前這組參數的答案
+## The answer for this parameter set
 
 | | |
 |---|---|
-| 熱遲滯因子 R | **5.71**（熱鋒面比水慢 5.71 倍） |
-| 井距 800 m、抽注 50 L/s | 熱突破（生產溫度降 2 °C）**18.0 年** |
-| 40 年後生產溫度 | 130 → **110.7 °C** |
-| 撐滿 30 年所需井距 | 25 L/s → 768 m ・ 50 L/s → 1037 m ・ 75 L/s → 1236 m ・ 100 L/s → 1401 m |
+| Thermal retardation factor R | **5.71** (the thermal front is 5.71× slower than the water) |
+| 800 m spacing, 50 L/s | Thermal breakthrough (2 °C drop in production temperature) at **18.0 years** |
+| Production temperature after 40 years | 130 → **110.7 °C** |
+| Spacing needed to last 30 years | 25 L/s → 768 m ・ 50 L/s → 1037 m ・ 75 L/s → 1236 m ・ 100 L/s → 1401 m |
 
-熱突破時間大致正比於 `井距² / 抽注率`。想加大產能，井距要跟著開根號放大。
+Breakthrough time scales roughly as `spacing² / pumping rate`. If you want more
+capacity, the spacing has to grow with the square root of it.
 
-### 全場最重要的一個數字
+### The single most important number here
 
 ```
 R = C_bulk / (φ · C_water) = 2.4e6 / (0.10 × 4.2e6) = 5.71
 ```
 
-岩石也會蓄熱，所以熱鋒面走得比水慢。**示蹤劑打穿 ≠ 熱打穿。**
+The rock stores heat too, so the thermal front travels more slowly than the
+water. **Tracer breakthrough ≠ thermal breakthrough.**
 
-忘記乘 R 不會讓程式壞掉、不會噴 warning、圖畫出來一模一樣漂亮 ——
-只是熱突破時間會差 5.7 倍，井距會少估到剩五分之一。這就是
-`tests/test_04_retardation.R` 存在的理由。
+Forgetting to multiply by R does not crash anything, does not raise a warning,
+and the plots come out looking exactly as pretty — the breakthrough time is
+just off by a factor of 5.7, and the required spacing is underestimated to a
+fifth of its true value. That is precisely why
+`tests/test_04_retardation.R` exists.
 
-## 負責人
+## Where the outputs live
 
-- 計畫負責人：陳易暄（2026-08-17 起）
-- 審查者：〔待填〕
+- Large files are not version-controlled. See [`output-link.md`](output-link.md).
+- Local outputs: `outputs/` (already in `.gitignore`)
 
-## Output 位置
-
-- 大檔案不進版控。見 [`output-link.md`](output-link.md)。
-- 本機產出：`outputs/`（已在 `.gitignore`）
-
-## 資料夾結構
+## Folder structure
 
 ```
 geothermal-doublet/
-├─ README.md              ← repo 身分證
-├─ run_all.R              ← 一次跑完整條流程
+├─ README.md              ← the repo's ID card (English, this file)
+├─ README.zh-TW.md        ← Traditional Chinese version
+├─ run_all.R              ← runs the whole pipeline end to end
 ├─ params/
-│  └─ params.csv          ← 所有物理參數(合成),不寫死在程式裡
-├─ R/                     ← 分析主體,照編號依序執行
-│  ├─ 00_intro.R          ← 產生專案說明頁(規格/IC/BC/方程式/檔案用法)
-│  ├─ 01_setup.R          ← 參數、網格、IC/BC(只定義函式,不做運算)
-│  ├─ 02_flow.R           ← 穩態水頭 + Darcy 通量 + 流線追蹤
-│  ├─ 03_heat.R           ← 溫度移流–延散(熱遲滯 R 由此自然長出)
-│  ├─ 04_sweep.R          ← 設計掃描:井距 x 抽注率 -> 熱突破年數
-│  ├─ 05_viz.R            ← 互動式報告(plotly + highcharter)
-│  └─ 99_demo_prep.R      ← workshop 選配:產生「物理寫錯」的對照報告
+│  └─ params.csv          ← every physical parameter (synthetic), never hard-coded in the scripts
+├─ R/                     ← the analysis itself, run in numbered order
+│  ├─ 00_intro.R          ← builds the project brief page (spec / IC / BC / equations / usage)
+│  ├─ 01_setup.R          ← parameters, grid, IC/BC (defines functions only, computes nothing)
+│  ├─ 02_flow.R           ← steady head + Darcy flux + streamline tracing
+│  ├─ 03_heat.R           ← temperature advection–dispersion (R emerges naturally here)
+│  ├─ 04_sweep.R          ← design sweep: spacing x pumping rate -> years to breakthrough
+│  ├─ 05_viz.R            ← the interactive report (plotly + highcharter)
+│  └─ 99_demo_prep.R      ← optional for the workshop: a "physics done wrong" counter-example report
 ├─ tests/
-│  ├─ run_tests.R         ← 入口:Rscript tests/run_tests.R
-│  ├─ test_01_flow_mass.R    質量守恆
-│  ├─ test_02_cfl.R          顯式法穩定條件
-│  ├─ test_03_energy.R       能量守恆
-│  ├─ test_04_retardation.R  熱遲滯因子 R  ← 最重要的一支
-│  └─ test_05_gringarten.R   與解析解對照 + 網格收斂
+│  ├─ run_tests.R         ← entry point: Rscript tests/run_tests.R
+│  ├─ test_01_flow_mass.R    mass conservation
+│  ├─ test_02_cfl.R          stability limit of the explicit scheme
+│  ├─ test_03_energy.R       energy conservation
+│  ├─ test_04_retardation.R  thermal retardation factor R  ← the important one
+│  └─ test_05_gringarten.R   comparison against the analytical solution + grid convergence
 ├─ docs/
-│  ├─ model-notes.md      ← 假設、簡化、數值決策紀錄
-│  └─ workshop-guide.md   ← 現場怎麼用這個 repo 上課
-└─ output-link.md         ← 大檔案的雲端/NAS 位置
+│  ├─ model-notes.md      ← assumptions, simplifications, numerical decisions
+│  └─ workshop-guide.md   ← how to actually teach from this repo
+└─ output-link.md         ← where the large files live (cloud / NAS)
 ```
 
-每一支腳本都會把結果存成 `outputs/0X_*.RData`，下一支直接讀。所以你可以
-只重跑後面某一段（例如改個顏色只要 `Rscript R/05_viz.R`）。
+Each script saves its result to `outputs/0X_*.RData`, which the next one reads
+directly. So you can re-run just a later stage on its own (changing a colour,
+for instance, only needs `Rscript R/05_viz.R`).
 
-## 需要的套件
+## Packages required
 
-核心運算是 **純 base R**（矩陣運算，沒有任何模擬套件）。只有畫圖需要：
+The core computation is **pure base R** (matrix arithmetic, no simulation
+package anywhere). Only the plotting needs anything:
 
 ```r
 install.packages(c("plotly", "highcharter", "htmltools", "viridisLite", "testthat"))
 ```
 
-刻意不用 `RMODFLOW` 之類的 wrapper —— 自己寫網格才是這個 demo 的教學重點。
+Wrappers such as `RMODFLOW` are deliberately avoided — writing the grid
+yourself is the teaching point of this demo.
 
-## 幾個關鍵的實作決定
+## A few key implementation decisions
 
-**用能量的有限體積法，不直接離散 dT/dt 的偏微分方程。**
-換來三件事：(1) 能量守恆變成可以測到機器精度（1e-13）的恆等式；
-(2) 井的源匯項自然就對；(3) 熱遲滯因子 R 不是「乘上去的修正」，而是從
-`C_bulk / (φ·C_water)` 自己長出來的 —— 可以在結果裡「量」到它，再回頭對理論值。
+**A finite-volume energy balance, rather than discretising the dT/dt PDE directly.**
+That buys three things: (1) energy conservation becomes an identity you can
+measure to machine precision (1e-13); (2) the well source/sink terms come out
+right by construction; (3) the thermal retardation factor R is not a correction
+bolted on afterwards — it grows out of `C_bulk / (φ·C_water)` by itself, so you
+can *measure* it in the results and check it against theory.
 
-**穩定條件是從離散式讀出來的，不是背公式。**
-更新式是 `Temp_new = (1 + dt·cP/(V·C))·Temp + (一堆非負項)`。只要自己這一格
-的係數掉到負的，解就開始振盪。所以 `dt ≤ V·C / (−cP)`。
-`test_02_cfl.R` 順便證明了超過會怎樣：2 倍就噴到 ±10¹⁴ °C。
+**The stability limit is read off the discretisation, not recalled from a formula.**
+The update is `Temp_new = (1 + dt·cP/(V·C))·Temp + (a pile of non-negative terms)`.
+As soon as the cell's own coefficient goes negative, the solution starts to
+oscillate. Hence `dt ≤ V·C / (−cP)`. `test_02_cfl.R` also demonstrates what
+exceeding it looks like: at 2× it blows up to ±10¹⁴ °C.
 
-**全程向量化，沒有一個逐格 for loop。**
-所有係數（平流、傳導、延散、井、邊界）在時間迴圈開始前就攤成常數矩陣，
-迴圈裡只剩五次乘加。40 年 6920 步、16000 格，8 秒跑完。
-改寫前是 53 秒，結果一個位元都沒變。
+**Fully vectorised — not one cell-by-cell for loop.**
+Every coefficient (advection, conduction, dispersion, wells, boundaries) is
+flattened into constant matrices before the time loop starts, leaving only five
+multiply-adds inside the loop. 40 years, 6920 steps, 16000 cells, 8 seconds.
+Before the rewrite it took 53 seconds, and the results did not change by a
+single bit.
 
-**圖表工具跟著題目走。**
-場圖（16000 格 × 21 影格）用 plotly，走 canvas，扛得住，而且有原生的
-播放鍵＋時間滑桿。歷線與設計圖資料量小，用 highcharter，標註 API 比較直覺、
-視覺也漂亮。同一份 HTML 裡混用兩個 htmlwidget 沒問題。
+**The plotting tool follows the problem.**
+The field plots (16000 cells × 21 frames) use plotly, which renders to canvas
+and copes with that, and which has a native play button and time slider. The
+time series and design chart carry far less data, so they use highcharter —
+its annotation API is more intuitive and it looks better. Mixing two
+htmlwidgets in one HTML file is not a problem.
 
-## 已知的簡化（誠實清單）
+## Known simplifications (the honest list)
 
-- **2D、單相、水平**。沒有浮力對流、沒有兩相、沒有上下蓋層的熱傳導損失。
-  蓋層傳導會讓真實的熱突破再晚一些，所以本模型偏保守。
-- **均質等向**。真實裂隙型地熱儲層的非均質性會讓冷水沿高滲透帶提早穿透。
-  這是本模型最大的樂觀來源。
-- **井被抹平成一個格點**。生產溫度是該格的平均值，不是井壁溫度。
-- **一階上風差分有數值延散**，鋒面比實際更平滑。`test_05_gringarten.R`
-  量化了這件事：網格加密時，最早到達時間單調逼近解析解（0.49 → 0.64 → 0.75）。
-- **掃描用較粗的網格**（dx = 40 m），數值延散更大，所以掃描出來的年數比
-  細網格再保守約 7%（800 m / 50 L/s：粗 16.7 年 vs 細 18.0 年）。
+- **2D, single-phase, horizontal.** No buoyancy-driven convection, no two-phase
+  flow, no conductive heat loss to the cap and base rock. Cap-rock conduction
+  would push real breakthrough somewhat later, so this model errs conservative.
+- **Homogeneous and isotropic.** Heterogeneity in a real fractured geothermal
+  reservoir lets cold water break through early along high-permeability paths.
+  This is the model's largest source of optimism.
+- **Wells are smeared over a single cell.** The production temperature is that
+  cell's average, not the temperature at the well face.
+- **First-order upwind differencing carries numerical dispersion**, so the front
+  is smoother than reality. `test_05_gringarten.R` quantifies this: as the grid
+  is refined, the earliest arrival time converges monotonically towards the
+  analytical solution (0.49 → 0.64 → 0.75).
+- **The sweep uses a coarser grid** (dx = 40 m) and therefore more numerical
+  dispersion, which makes the swept years about 7% more conservative than the
+  fine grid (800 m / 50 L/s: coarse 16.7 years vs fine 18.0 years).
 
-詳見 [`docs/model-notes.md`](docs/model-notes.md)。
+Details in [`docs/model-notes.md`](docs/model-notes.md).
 
-## 兩個命名上的說明
+## Two notes on naming
 
-熟悉 handout 標準資料夾結構的人會發現兩處不一樣：
+Anyone familiar with the standard folder structure from the handout will spot
+two differences:
 
-- 參數放在 `params/`，不是慣例的那個名字 —— 這個 repo 沒有任何觀測資料，
-  只有一張物理參數表，用「資料」來命名反而誤導。
-- 中間結果存 `.RData`（`save()` / `load()`），不是 `.rds`。
+- Parameters live in `params/`, not under the conventional name — this repo has
+  no observational data at all, only a table of physical parameters, and
+  calling that "data" would be misleading.
+- Intermediate results are stored as `.RData` (`save()` / `load()`) rather than
+  `.rds`.
 
-兩者都只是命名。路徑集中定義在 `R/01_setup.R` 最上面的 `GT_PARAMS_FILE`
-與 `GT_OUT_DIR`，要換成別的慣例只要改那兩行。
+Both are just naming. The paths are defined in one place, `GT_PARAMS_FILE` and
+`GT_OUT_DIR` at the top of `R/01_setup.R`; switching to another convention means
+editing those two lines.
 
-## 參考文獻
+## References
 
 - Gringarten, A.C. & Sauty, J.P. (1975) A theoretical study of heat extraction
   from aquifers with uniform regional flow. *J. Geophys. Res.* 80(35): 4956–4962.
