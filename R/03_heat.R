@@ -14,6 +14,18 @@
 #
 # 時間:顯式 Euler。穩定條件由離散式自己算出來(不是背公式),見 dt_max。
 #
+# 蓋層/底岩(issue #4):原本上下邊界完全絕熱(lam_y 最外側面強制設 0)。
+# 現在多一條路徑 —— 含水層每一格垂直方向可以跟一疊蓋層/底岩的一維傳導
+# 層交換熱量,見下面「蓋層/底岩」那一段。關掉的方法就是 lambda_cap = 0,
+# 這時候所有新增的係數(G0、Gk、Gfar)都是 0,行為與 issue #4 之前逐位元
+# 相同 —— 不是「調整過的近似」,是同一條運算式乘上 0。
+#
+# 簡化假設(蓋層與底岩共用同一疊狀態):兩側幾何、物性、初始條件都對稱
+# (同一個 lambda_cap / rho_c_cap,遠端邊界都固定在 T_res),所以蓋層與
+# 底岩在每一步都會長出完全相同的溫度剖面。與其算兩份一模一樣的陣列,
+# 不如只算一份,在跟含水層耦合與能量加總時乘以 2 —— 數學上完全等價,
+# 記憶體與計算量減半。想讓蓋層、底岩物性不同,是很好的後續練習。
+#
 # 執行:  Rscript R/03_heat.R      (需要先跑過 02_flow.R)
 # ==========================================================================
 
@@ -23,14 +35,18 @@ source("R/01_setup.R")
 
 #' 解溫度場的時間演化
 #'
-#' @param C_bulk  儲熱的體積熱容。預設 m$C_b(熱)。
-#'                傳 m$p$phi * m$C_w 就變成「保守示蹤劑」(R = 1)——
-#'                tests/test_retardation.R 就是靠這一個參數做對照組。
-#' @param dt      NULL = 自動取 dt_safety * 穩定上限
-#' @return list(Temp, hist, snaps, dt, dt_max, energy_err_rel, ...)
+#' @param C_bulk    儲熱的體積熱容。預設 m$C_b(熱)。
+#'                  傳 m$p$phi * m$C_w 就變成「保守示蹤劑」(R = 1)——
+#'                  tests/test_retardation.R 就是靠這一個參數做對照組。
+#' @param lambda_cap 蓋層/底岩熱傳導度。0(預設,來自 params.csv)= 關閉,
+#'                  上下邊界維持 issue #4 之前的絕熱行為。
+#' @param dt        NULL = 自動取 dt_safety * 穩定上限
+#' @return list(Temp, hist, snaps, dt, dt_max, energy_err_rel, cap, ...)
 gt_solve_heat <- function(m, fl,
                           C_bulk      = m$C_b,
                           lambda_bulk = m$p$lambda_bulk,
+                          lambda_cap  = m$p$lambda_cap,
+                          rho_c_cap   = m$p$rho_c_cap,
                           t_end       = m$p$t_end_yr * DAYS_PER_YEAR,
                           dt          = NULL,
                           snap_per_yr = m$p$snap_per_yr,
@@ -68,13 +84,43 @@ gt_solve_heat <- function(m, fl,
   cP <- C_w * (pmin(Qxw, 0) - pmax(Qxe, 0) + pmin(Qyn, 0) - pmax(Qys, 0)) -
         (Gxw + Gxe + Gyn + Gys) + w_sink
 
+  ## --- 蓋層/底岩(issue #4):垂直方向的一維傳導層 -----------------------
+  ## 幾何:每一側從含水層中心往外疊 n_z 層,厚度以 dz_cap_growth 逐層放大
+  ## (離含水層越遠,溫度梯度越平緩,格子可以越粗)。最外層的外側面固定在
+  ## T_res(未受擾動的遠場岩溫)—— 只要疊的深度超過擴散長度
+  ## sqrt(4 * alpha_cap * t_end),這條 Dirichlet 邊界的影響就可以忽略。
+  ## 面與面之間的導度用「串聯熱阻」(半格厚度 / 熱傳導度 相加後取倒數),
+  ## 而不是像 lam_x/lam_y 那樣直接平均熱傳導度 —— 因為這裡兩側的物性
+  ## (含水層 lambda_bulk vs. 蓋層 lambda_cap)可能不一樣。
+  has_cap <- isTRUE(lambda_cap > 0) && m$p$n_z_cap >= 1L
+  if (has_cap) {
+    n_z   <- as.integer(m$p$n_z_cap)
+    dz    <- m$p$dz_cap0 * m$p$dz_cap_growth ^ (0:(n_z - 1L))
+    Aface <- dxm * dxm
+    G0    <- Aface / (bm / 2 / lambda_bulk + dz[1] / 2 / lambda_cap)
+    Gk    <- if (n_z >= 2L) {
+      Aface * lambda_cap / ((utils::head(dz, -1) + utils::tail(dz, -1)) / 2)
+    } else numeric(0)                                  # 層 k <-> 層 k+1
+    Gfar  <- Aface * lambda_cap / (dz[n_z] / 2)          # 最外層 <-> 遠場 T_res
+    V_lay <- Aface * dz
+    G_edges <- c(G0, Gk, Gfar)                          # 長度 n_z + 1
+    G_out   <- G_edges[1:n_z] + G_edges[2:(n_z + 1L)]    # 每層對外的總導度
+    dt_max_cap <- min(V_lay * rho_c_cap / G_out)
+  } else {
+    G0 <- 0
+  }
+
   ## --- 顯式法的穩定上限 ------------------------------------------------
   ## 更新式是  Temp_new = (1 + dt*cP/(V*C)) * Temp + (全部非負的鄰格項)
   ## cP 恆為負。只要「自己這一格的係數」掉到負的,解就會開始振盪、長出
   ## 物理上不存在的新極值,最後炸成 NaN。所以穩定條件就是這一句話:
   ##        dt <= V * C_bulk / (-cP)
   ## 不是背來的 CFL 公式,是從你自己寫的離散式讀出來的。
+  ## 蓋層/底岩開啟時,含水層每一格同時往上下兩側流失熱量(對稱疊層,見
+  ## 檔頭說明),所以是 2 * G0;蓋層自己那疊層也各自有一個穩定上限。
+  cP <- cP - if (has_cap) 2 * G0 else 0
   dt_max <- min(m$V_cell * C_bulk / pmax(-cP, .Machine$double.eps))
+  if (has_cap) dt_max <- min(dt_max, dt_max_cap)
 
   if (is.null(dt)) {
     ## 自動選 dt:先取安全係數,再微調成整除,終點才會剛好落在 t_end
@@ -95,9 +141,24 @@ gt_solve_heat <- function(m, fl,
   w_sink_v <- w_sink[i_sink]
   cst_sum <- sum(cst)
 
+  if (has_cap) {
+    aG0 <- fac * G0                                  # 含水層 <-> 蓋層第一層
+    fac_lay  <- dt / (V_lay * rho_c_cap)              # 每層自己的 dt/(V*C)
+    aDown_lay <- fac_lay * G_edges[1:n_z]             # 靠含水層那一側的鄰層
+    aUp_lay   <- fac_lay * G_edges[2:(n_z + 1L)]      # 靠遠場那一側的鄰層
+    aP_lay    <- 1 - fac_lay * G_out
+  }
+
   ## --- IC ---
   Temp <- matrix(m$p$T_res, ny, nx)
-  E0 <- sum(m$V_cell * C_bulk * Temp)
+  Zcap <- if (has_cap) array(m$p$T_res, dim = c(ny, nx, n_z)) else NULL
+  gt_cap_energy <- function(Zcap) {                  # 兩側對稱,乘 2
+    if (is.null(Zcap)) return(0)
+    2 * sum(vapply(seq_len(n_z), function(kk) {
+      V_lay[kk] * rho_c_cap * sum(Zcap[, , kk])
+    }, numeric(1)))
+  }
+  E0 <- sum(m$V_cell * C_bulk * Temp) + gt_cap_energy(Zcap)
 
   ## --- 記錄容器 ---
   t_day    <- numeric(nstep + 1L)
@@ -118,20 +179,36 @@ gt_solve_heat <- function(m, fl,
   iw <- c(1L, 1:(nx - 1L)); ie <- c(2:nx, nx)     # 鏡像 padding 的取用索引
   jn <- c(1L, 1:(ny - 1L)); js <- c(2:ny, ny)     # (最外側面通量 = 0,取誰都行)
   for (k in seq_len(nstep)) {
-    ## 這一步進來多少能量?只有井與定水頭邊界能改變總能量 ——
-    ## 內部面通量兩兩相消,這是有限體積法白送的守恆性質。用「更新前」的
-    ## 溫度算,才和顯式 Euler 一致。
-    cum <- cum + dt * (cst_sum + sum(w_sink_v * Temp[i_sink]))
+    ## 這一步進來多少能量?只有井、定水頭邊界、(開啟時)蓋層/底岩最外側
+    ## 的 T_res 遠場邊界能改變總能量 —— 內部面通量兩兩相消,這是有限體積
+    ## 法白送的守恆性質。用「更新前」的溫度算,才和顯式 Euler 一致。
+    cum <- cum + dt * (cst_sum + sum(w_sink_v * Temp[i_sink]) +
+      if (has_cap) 2 * sum(Gfar * (m$p$T_res - Zcap[, , n_z])) else 0)
 
-    ## 平流(上風)+ 傳導 + 延散 + 井 + 邊界,全部收在這一行
-    Temp <- aP * Temp +
+    ## 平流(上風)+ 傳導 + 延散 + 井 + 邊界,全部收在這一行。蓋層/底岩
+    ## 開啟時再加上「跟蓋層第一層交換的熱量」(2x,對稱疊層)。兩邊都只
+    ## 讀「更新前」的 Temp / Zcap,算完才一起指派,顯式 Euler 才不會混進
+    ## 這一步剛算出來的新值。
+    Temp_new <- aP * Temp +
             aW * Temp[, iw, drop = FALSE] + aE * Temp[, ie, drop = FALSE] +
             aN * Temp[jn, , drop = FALSE] + aS * Temp[js, , drop = FALSE] +
-            acst
+            acst + if (has_cap) 2 * aG0 * Zcap[, , 1] else 0
+
+    if (has_cap) {
+      Zcap_new <- Zcap
+      for (kk in seq_len(n_z)) {
+        below <- if (kk == 1L) Temp else Zcap[, , kk - 1L]
+        above <- if (kk == n_z) m$p$T_res else Zcap[, , kk + 1L]
+        Zcap_new[, , kk] <- aP_lay[kk] * Zcap[, , kk] +
+                            aDown_lay[kk] * below + aUp_lay[kk] * above
+      }
+      Zcap <- Zcap_new
+    }
+    Temp <- Temp_new
 
     t_day[k + 1L]    <- k * dt
     Temp_pro[k + 1L] <- Temp[m$idx_pro]
-    E_tot[k + 1L]    <- m$V_cell * C_bulk * sum(Temp)
+    E_tot[k + 1L]    <- m$V_cell * C_bulk * sum(Temp) + gt_cap_energy(Zcap)
     E_in_cum[k + 1L] <- cum
 
     if (store_snaps && k %% snap_every == 0L) {
@@ -162,7 +239,11 @@ gt_solve_heat <- function(m, fl,
                       Temp_pro = Temp_pro, E_tot = E_tot, E_in_cum = E_in_cum),
     snaps = snaps, snap_t = snap_t,
     energy_err_rel = energy_err_rel,
-    C_bulk = C_bulk, lambda_bulk = lambda_bulk
+    C_bulk = C_bulk, lambda_bulk = lambda_bulk,
+    has_cap = has_cap, lambda_cap = lambda_cap, rho_c_cap = rho_c_cap,
+    Zcap = if (has_cap) Zcap else NULL,
+    cap = if (has_cap) list(dz = dz, G0 = G0, Gk = Gk, Gfar = Gfar,
+                            n_z = n_z, depth = sum(dz)) else NULL
   )
 }
 
@@ -177,6 +258,12 @@ gt_run_heat <- function() {
   cat(sprintf("  dt = %.3f day (穩定上限 %.3f day), %d 步, %.1f s\n",
               ht$dt, ht$dt_max, ht$nstep, proc.time()[["elapsed"]] - tic))
   cat(sprintf("  能量守恆相對誤差 = %.3e\n", ht$energy_err_rel))
+  if (ht$has_cap) {
+    cat(sprintf("  蓋層/底岩傳導  已開啟 (lambda_cap = %g J/m/day/K, 每側疊 %d 層, 深 %.0f m)\n",
+                ht$lambda_cap, ht$cap$n_z, ht$cap$depth))
+  } else {
+    cat("  蓋層/底岩傳導  關閉(絕熱,lambda_cap = 0)\n")
+  }
 
   bt <- gt_breakthrough(ht$hist$t_day, ht$hist$Temp_pro,
                         m$p$T_res, m$p$T_drop_crit)

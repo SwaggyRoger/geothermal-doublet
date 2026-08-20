@@ -39,11 +39,16 @@ GT_PARAM_ZH <- list(
   t_end_yr = c("模擬期間", "數值設定"),
   dt_safety = c("時間步長取穩定上限的幾成", "數值設定"),
   snap_per_yr = c("每年儲存幾張溫度場快照", "數值設定"),
-  T_drop_crit = c("判定熱突破的生產溫度降幅", "判準")
+  T_drop_crit = c("判定熱突破的生產溫度降幅", "判準"),
+  lambda_cap = c("蓋層/底岩熱傳導度（0 = 關閉，維持絕熱）", "蓋層/底岩"),
+  rho_c_cap = c("蓋層/底岩的體積熱容", "蓋層/底岩"),
+  n_z_cap = c("每側疊幾層一維傳導層", "蓋層/底岩"),
+  dz_cap0 = c("最靠近含水層那一層的厚度", "蓋層/底岩"),
+  dz_cap_growth = c("往外逐層放大的等比係數", "蓋層/底岩")
 )
 
 GT_PARAM_ORDER <- c("網格", "含水層", "井", "初始條件", "邊界條件",
-                    "熱物性", "數值設定", "判準")
+                    "熱物性", "蓋層/底岩", "數值設定", "判準")
 
 gt_param_table <- function(file = GT_PARAMS_FILE) {
   tab <- utils::read.csv(file, stringsAsFactors = FALSE)
