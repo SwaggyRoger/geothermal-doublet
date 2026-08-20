@@ -20,7 +20,7 @@ source("R/05_viz.R")     # 借用 gt_write_selfcontained() 與版面 CSS
 ## csv 裡的 description,所以漏掉一個也不會壞。
 
 GT_PARAM_ZH <- list(
-  Lx = c("模型域長度（x，區域流方向）", "網格"),
+  Lx = c("模型域長度（x，區域流方向）", "網格haha"),
   Ly = c("模型域寬度（y）", "網格"),
   dx = c("網格間距（dx = dy）", "網格"),
   b  = c("含水層厚度", "含水層"),
