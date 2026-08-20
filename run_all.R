@@ -6,6 +6,25 @@
 # 每一支也都可以單獨執行(例如只重畫圖:Rscript R/05_viz.R)。
 # ==========================================================================
 
+if (!file.exists("params/params.csv") || !file.exists("R/01_setup.R")) {
+  stop(
+    "請在 repo 根目錄執行(找不到 params/params.csv 與 R/01_setup.R)。\n",
+    "目前工作目錄是: ", getwd(),
+    call. = FALSE
+  )
+}
+
+need <- c("plotly", "highcharter", "htmltools", "viridisLite")
+have <- vapply(need, requireNamespace, logical(1), quietly = TRUE)
+if (!all(have)) {
+  miss <- need[!have]
+  stop(
+    "缺少套件: ", paste(miss, collapse = ", "), "\n",
+    "請先執行: install.packages(c(", paste0('"', miss, '"', collapse = ", "), "))",
+    call. = FALSE
+  )
+}
+
 t0 <- proc.time()[["elapsed"]]
 step <- function(n, title) cat(sprintf(
   "\n=== [%s] %s %s\n", n, title, strrep("=", max(0, 56 - nchar(title)))))
