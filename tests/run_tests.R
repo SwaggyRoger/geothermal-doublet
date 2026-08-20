@@ -12,8 +12,11 @@ source("R/01_setup.R")
 source("R/02_flow.R")
 source("R/03_heat.R")
 
-## testthat 會把工作目錄切到 tests/,參數檔的相對路徑會失效 —— 先轉絕對路徑
-GT_PARAMS_FILE <- normalizePath(GT_PARAMS_FILE, mustWork = TRUE)
+## testthat 會把工作目錄切到 tests/,參數檔的相對路徑會失效 —— 先轉絕對路徑。
+## 有些測試(例如 test_06_animation.R)會用不帶 local = TRUE 的 source() 重新
+## 載入 R/01_setup.R,把 GT_PARAMS_FILE 蓋回相對路徑的預設值 —— 所以每個檔案
+## 開跑前都要重轉一次絕對路徑,不能只在迴圈外面轉一次。
+GT_PARAMS_FILE_ABS <- normalizePath(GT_PARAMS_FILE, mustWork = TRUE)
 
 cat("\n================ geothermal-doublet 測試 ================\n\n")
 t0 <- proc.time()[["elapsed"]]
@@ -23,6 +26,7 @@ if (length(files) == 0L) stop("tests/ 裡沒有 test_*.R", call. = FALSE)
 
 n_fail <- 0L
 for (f in files) {
+  GT_PARAMS_FILE <- GT_PARAMS_FILE_ABS
   cat("---", basename(f), "---\n")
   res <- as.data.frame(test_file(f, reporter = "summary",
                                  env = new.env(parent = globalenv())))

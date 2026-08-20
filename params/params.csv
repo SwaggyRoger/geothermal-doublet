@@ -19,3 +19,8 @@ t_end_yr,40,yr,simulated period
 dt_safety,0.8,-,fraction of the explicit stability limit used as dt
 snap_per_yr,2,1/yr,temperature snapshots stored per year
 T_drop_crit,2,degC,production temperature drop that defines thermal breakthrough
+lambda_cap,0,J/m/day/K,cap/base rock thermal conductivity (0 = disabled i.e. adiabatic top/bottom as before #4)
+rho_c_cap,2.2e6,J/m3/K,volumetric heat capacity of the cap/base rock (only used when lambda_cap > 0)
+n_z_cap,10,-,number of 1D conduction layers modelled per side (cap and base share one symmetric stack)
+dz_cap0,2,m,thickness of the cap/base layer nearest the aquifer
+dz_cap_growth,1.5,-,geometric growth factor for successive cap/base layers (keeps the far layer's fixed-T_res boundary beyond the diffusion length)
